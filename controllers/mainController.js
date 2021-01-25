@@ -29,7 +29,6 @@ exports.GET_USER = async (req, res) => {
     if (!user) {
       res.status(404).json({ message: 'User not found' });
     }
-
     return res.json({ user, posts });
   } catch (err) {
     return res.status(500).json({ message: 'Something went wrong' });
@@ -166,6 +165,10 @@ exports.POST_FRIEND_REQUEST = async (req, res) => {
 };
 
 exports.POST_ACCEPT_FRIEND = async (req, res) => {
+  const me = await User.findById(req.params.id)
+    .populate('friendRequests')
+    .populate('friends')
+    .select('-password');
   const user = await User.findById(req.user._id)
     .populate('friendRequests')
     .populate('friends')
@@ -173,6 +176,11 @@ exports.POST_ACCEPT_FRIEND = async (req, res) => {
   user.friendRequests = user.friendRequests.filter(
     (request) => request._id.toString() !== req.params.id.toString()
   );
+  me.friendRequest = me.friendRequests.filter(
+    (request) => request._id.toString() !== req.params.id.toString()
+  );
+  me.friends.push(user._id);
+  await me.save();
   user.friends.push(req.params.id);
   await user.save();
   return res.json({ message: 'Friend added' });
